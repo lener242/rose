@@ -6,9 +6,10 @@ import asyncio
 # ===== НАСТРОЙКИ =====
 import os
 BOT_TOKEN = os.getenv("DISCORD_BOT_TOKEN")
+GUILD_ID = 1458298216461369573                 # ID сервера
 APPLICATIONS_CHANNEL_ID = 1479584185524944927  # ID канала куда приходят заявки
 APPROVED_ROLE_ID = 1477044728980836552         # ID роли которая выдаётся после одобрения
-MODERATOR_ROLE_IDS = [1477036902644318451, 1477037399845507124, 1477039314427711600]     # ID ролей которые могут одобрять/отклонять
+MODERATOR_ROLE_IDS = [1477036902644318451, 1477037399845507124, 1477039314427711600]
 # =====================
 
 intents = discord.Intents.default()
@@ -48,7 +49,27 @@ class ApplicationModal(Modal, title="Анкета вступления"):
 
     async def on_submit(self, interaction: discord.Interaction):
         member = interaction.user
+
+        # Получаем guild — если анкета открыта из ЛС, берём по ID
         guild = interaction.guild
+        if guild is None:
+            guild = bot.get_guild(GUILD_ID)
+
+        if guild is None:
+            await interaction.response.send_message(
+                "❌ Ошибка: не удалось найти сервер. Обратись к администратору.",
+                ephemeral=True
+            )
+            return
+
+        # Получаем member из guild
+        guild_member = guild.get_member(member.id)
+        if guild_member is None:
+            await interaction.response.send_message(
+                "❌ Ошибка: ты не найден на сервере.",
+                ephemeral=True
+            )
+            return
 
         game_nick = self.game_nick.value.strip()
         real_name = self.real_name.value.strip()
@@ -61,7 +82,7 @@ class ApplicationModal(Modal, title="Анкета вступления"):
 
         # Меняем ник участника
         try:
-            await member.edit(nick=new_nick)
+            await guild_member.edit(nick=new_nick)
             nick_status = f"✅ Ник установлен: `{new_nick}`"
         except discord.Forbidden:
             nick_status = "⚠️ Не удалось сменить ник (нет прав или это владелец сервера)"
@@ -83,7 +104,7 @@ class ApplicationModal(Modal, title="Анкета вступления"):
             embed.add_field(name="🏷️ Ник на сервере", value=nick_status, inline=False)
             embed.set_footer(text=f"ID: {member.id}")
 
-            view = ApproveView(member_id=member.id, guild=guild)
+            view = ApproveView(member_id=member.id, guild_id=guild.id)
             await apps_channel.send(embed=embed, view=view)
 
         await interaction.response.send_message(
@@ -94,10 +115,10 @@ class ApplicationModal(Modal, title="Анкета вступления"):
 
 # --- Кнопки одобрить/отклонить ---
 class ApproveView(View):
-    def __init__(self, member_id: int, guild: discord.Guild):
+    def __init__(self, member_id: int, guild_id: int):
         super().__init__(timeout=None)
         self.member_id = member_id
-        self.guild = guild
+        self.guild_id = guild_id
 
     def is_moderator(self, interaction: discord.Interaction) -> bool:
         user_role_ids = [role.id for role in interaction.user.roles]
@@ -109,7 +130,7 @@ class ApproveView(View):
             await interaction.response.send_message("❌ У тебя нет прав для этого действия.", ephemeral=True)
             return
 
-        guild = interaction.guild
+        guild = bot.get_guild(self.guild_id)
         member = guild.get_member(self.member_id)
 
         if member is None:
@@ -145,7 +166,7 @@ class ApproveView(View):
             await interaction.response.send_message("❌ У тебя нет прав для этого действия.", ephemeral=True)
             return
 
-        guild = interaction.guild
+        guild = bot.get_guild(self.guild_id)
         member = guild.get_member(self.member_id)
 
         if member:
