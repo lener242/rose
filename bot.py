@@ -4,7 +4,8 @@ from discord.ui import Button, View, Modal, TextInput
 import asyncio
 
 # ===== НАСТРОЙКИ =====
-BOT_TOKEN = "ВАШ_НОВЫЙ_ТОКЕН_СЮДА"
+import os
+BOT_TOKEN = os.getenv("DISCORD_BOT_TOKEN")
 GUILD_ID = 1458298216461369573                 # ID сервера
 APPLICATIONS_CHANNEL_ID = 1479584185524944927  # ID канала куда приходят заявки
 APPROVED_ROLE_ID = 1477044728980836552         # ID роли которая выдаётся после одобрения
