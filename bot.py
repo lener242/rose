@@ -4,10 +4,11 @@ from discord.ui import Button, View, Modal, TextInput
 import asyncio
 
 # ===== НАСТРОЙКИ =====
-BOT_TOKEN = "ВАШ_ТОКЕН_СЮДА"
-APPLICATIONS_CHANNEL_ID = 123456789  # ID канала куда приходят заявки
-APPROVED_ROLE_ID = 123456789         # ID роли которая выдаётся после одобрения
-MODERATOR_ROLE_IDS = [123456789]     # ID ролей которые могут одобрять/отклонять
+import os
+BOT_TOKEN = os.getenv("DISCORD_BOT_TOKEN")
+APPLICATIONS_CHANNEL_ID = 1479584185524944927  # ID канала куда приходят заявки
+APPROVED_ROLE_ID = 1477044728980836552         # ID роли которая выдаётся после одобрения
+MODERATOR_ROLE_IDS = [1477036902644318451, 1477037399845507124, 1477039314427711600]     # ID ролей которые могут одобрять/отклонять
 # =====================
 
 intents = discord.Intents.default()
