@@ -4,12 +4,12 @@ from discord.ui import Button, View, Modal, TextInput
 import asyncio
 
 # ===== НАСТРОЙКИ =====
-import os
-BOT_TOKEN = os.getenv("DISCORD_BOT_TOKEN")
+BOT_TOKEN = "ВАШ_НОВЫЙ_ТОКЕН_СЮДА"
 GUILD_ID = 1458298216461369573                 # ID сервера
 APPLICATIONS_CHANNEL_ID = 1479584185524944927  # ID канала куда приходят заявки
 APPROVED_ROLE_ID = 1477044728980836552         # ID роли которая выдаётся после одобрения
 MODERATOR_ROLE_IDS = [1477036902644318451, 1477037399845507124, 1477039314427711600]
+ANKETA_CHANNEL_ID = 1480013460401160496      # ID канала где удаляются все сообщения кроме первого
 # =====================
 
 intents = discord.Intents.default()
@@ -182,6 +182,29 @@ class ApproveView(View):
         self.approve.disabled = True
         self.reject.disabled = True
         await interaction.response.edit_message(embed=embed, view=self)
+
+
+# --- Автоудаление сообщений в канале анкеты ---
+@bot.event
+async def on_message(message: discord.Message):
+    # Игнорируем сообщения бота
+    if message.author.bot:
+        return
+
+    # Если сообщение в канале анкеты — удаляем (кроме закреплённого)
+    if message.channel.id == ANKETA_CHANNEL_ID:
+        if message.id == 1480016173952274562:  # сообщение с описанием — не трогаем
+            return
+        try:
+            await asyncio.sleep(1)
+            await message.delete()
+        except discord.Forbidden:
+            pass
+        except discord.NotFound:
+            pass
+        return
+
+    await bot.process_commands(message)
 
 
 # --- Приветствие при входе на сервер ---
