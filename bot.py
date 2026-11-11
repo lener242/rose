@@ -3,15 +3,13 @@ from discord.ext import commands
 from discord.ui import Button, View, Modal, TextInput
 import asyncio
 
-# ===== НАСТРОЙКИ =====
 import os
 BOT_TOKEN = os.getenv("DISCORD_BOT_TOKEN")
-GUILD_ID = 1458298216461369573                 # ID сервера
-APPLICATIONS_CHANNEL_ID = 1479584185524944927  # ID канала куда приходят заявки
-APPROVED_ROLE_ID = 1477044728980836552         # ID роли которая выдаётся после одобрения
+GUILD_ID = 1458298216461369573                 
+APPLICATIONS_CHANNEL_ID = 1479584185524944927  
+APPROVED_ROLE_ID = 1477044728980836552         
 MODERATOR_ROLE_IDS = [1477036902644318451, 1477037399845507124, 1477039314427711600, 1477039276419186781]
-ANKETA_CHANNEL_ID = 1480013460401160496      # ID канала где удаляются все сообщения кроме первого
-# =====================
+ANKETA_CHANNEL_ID = 1480013460401160496      
 
 intents = discord.Intents.default()
 intents.members = True
@@ -20,7 +18,6 @@ intents.message_content = True
 bot = commands.Bot(command_prefix="!", intents=intents)
 
 
-# --- Модальное окно с вопросами ---
 class ApplicationModal(Modal, title="Анкета вступления"):
     game_nick = TextInput(
         label="Ник в игре (только имя, без фамилии)",
@@ -51,7 +48,6 @@ class ApplicationModal(Modal, title="Анкета вступления"):
     async def on_submit(self, interaction: discord.Interaction):
         member = interaction.user
 
-        # Получаем guild — если анкета открыта из ЛС, берём по ID
         guild = interaction.guild
         if guild is None:
             guild = bot.get_guild(GUILD_ID)
@@ -63,7 +59,6 @@ class ApplicationModal(Modal, title="Анкета вступления"):
             )
             return
 
-        # Получаем member из guild
         guild_member = guild.get_member(member.id)
         if guild_member is None:
             await interaction.response.send_message(
@@ -78,17 +73,14 @@ class ApplicationModal(Modal, title="Анкета вступления"):
         hours = self.hours.value.strip()
         age = self.age.value.strip()
 
-        # Новый ник: Имя в игре | Имя в жизни | Статик
         new_nick = f"{game_nick} | {real_name} | {static_id}"
 
-        # Меняем ник участника
         try:
             await guild_member.edit(nick=new_nick)
             nick_status = f"✅ Ник установлен: `{new_nick}`"
         except discord.Forbidden:
             nick_status = "⚠️ Не удалось сменить ник (нет прав или это владелец сервера)"
 
-        # Отправляем заявку в канал модераторов
         apps_channel = guild.get_channel(APPLICATIONS_CHANNEL_ID)
         if apps_channel:
             embed = discord.Embed(
@@ -114,7 +106,6 @@ class ApplicationModal(Modal, title="Анкета вступления"):
         )
 
 
-# --- Кнопки одобрить/отклонить ---
 class ApproveView(View):
     def __init__(self, member_id: int, guild_id: int):
         super().__init__(timeout=None)
@@ -138,7 +129,6 @@ class ApproveView(View):
             await interaction.response.send_message("⚠️ Участник покинул сервер.", ephemeral=True)
             return
 
-        # Выдаём роль
         role = guild.get_role(APPROVED_ROLE_ID)
         if role:
             try:
@@ -146,13 +136,11 @@ class ApproveView(View):
             except discord.Forbidden:
                 pass
 
-        # Уведомляем участника
         try:
             await member.send(f"✅ Твоя заявка на сервере **{guild.name}** была **одобрена**! Добро пожаловать!")
         except discord.Forbidden:
             pass
 
-        # Обновляем embed
         embed = interaction.message.embeds[0]
         embed.color = discord.Color.green()
         embed.add_field(name="📌 Статус", value=f"✅ Одобрено модератором {interaction.user.mention}", inline=False)
@@ -185,16 +173,13 @@ class ApproveView(View):
         await interaction.response.edit_message(embed=embed, view=self)
 
 
-# --- Автоудаление сообщений в канале анкеты ---
 @bot.event
 async def on_message(message: discord.Message):
-    # Игнорируем сообщения бота
     if message.author.bot:
         return
 
-    # Если сообщение в канале анкеты — удаляем (кроме закреплённого)
     if message.channel.id == ANKETA_CHANNEL_ID:
-        if message.id == 1480016173952274562:  # сообщение с описанием — не трогаем
+        if message.id == 1480016173952274562:  
             return
         try:
             await asyncio.sleep(1)
@@ -208,7 +193,6 @@ async def on_message(message: discord.Message):
     await bot.process_commands(message)
 
 
-# --- Приветствие при входе на сервер ---
 @bot.event
 async def on_member_join(member: discord.Member):
     try:
@@ -227,7 +211,6 @@ async def on_member_join(member: discord.Member):
         view = StartApplicationView()
         await member.send(embed=embed, view=view)
     except discord.Forbidden:
-        # Если ЛС закрыты — пишем в системный канал
         if member.guild.system_channel:
             await member.guild.system_channel.send(
                 f"{member.mention}, добро пожаловать! Открой личные сообщения, "
@@ -235,7 +218,6 @@ async def on_member_join(member: discord.Member):
             )
 
 
-# --- Кнопка «Заполнить анкету» в ЛС ---
 class StartApplicationView(View):
     def __init__(self):
         super().__init__(timeout=300)
@@ -245,7 +227,7 @@ class StartApplicationView(View):
         await interaction.response.send_modal(ApplicationModal())
 
 
-# --- Слэш-команда /анкета для повторного заполнения ---
+
 @bot.tree.command(name="анкета", description="Заполнить анкету вступления")
 async def slash_anketa(interaction: discord.Interaction):
     await interaction.response.send_modal(ApplicationModal())
